@@ -1,5 +1,8 @@
 // Tax Calculator - Service Worker
-const CACHE_NAME = 'tax-calculator-v1';
+// v2: bumped cache name to force-evict the old cached shell (which still had
+// the <iframe> in it), and switched the HTML document to network-first so a
+// stale cached page can never get "stuck" like this again.
+const CACHE_NAME = 'tax-calculator-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(event) {
@@ -25,13 +28,30 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  // Only handle same-origin GET requests (the shell). The app itself lives
-  // in the Apps Script iframe on a different origin and manages its own
-  // caching/network behavior — we don't want to intercept that.
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
+  const isDocument = event.request.mode === 'navigate' ||
+                      event.request.destination === 'document';
+
+  if (isDocument) {
+    // Network-first for the shell page itself — always try to get the
+    // latest index.html so a deploy is never masked by an old cached copy.
+    // Only fall back to cache if the network is actually unreachable.
+    event.respondWith(
+      fetch(event.request).then(function(networkResponse) {
+        const clone = networkResponse.clone();
+        caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
+        return networkResponse;
+      }).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icon, manifest) — these rarely change.
   event.respondWith(
     caches.match(event.request).then(function(response) {
       return response || fetch(event.request).then(function(networkResponse) {

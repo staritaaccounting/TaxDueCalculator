@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Tax Calculator</title>
+<meta name="theme-color" content="#0d2b52">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tax Calculator">
+<meta name="description" content="Tax Calculator — BIR tax compliance calculator and filing assistant.">
+<style>
+  :root{
+    --navy:#0d2b52;
+    --blue:#1e6fd9;
+    --blue2:#5aa6f2;
+    --gold:#f5a800;
+    --gold2:#ffc940;
+    --bg:#f4f7fb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden}
+  #appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+
+  /* ---------- splash ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:20;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:22px;
+    background:radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eff8 65%, #dde8f6 100%);
+    transition:opacity .5s ease, visibility .5s ease;
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+
+  .logo-wrap{
+    position:relative;width:196px;height:196px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .logo-wrap img{
+    width:140px;height:140px;border-radius:50%;
+    box-shadow:0 4px 30px rgba(13,43,82,.25);
+    position:relative;z-index:2;
+    object-fit:cover;background:#fff;
+  }
+
+  .ring{position:absolute;border-radius:50%;border:2.5px solid transparent;}
+  .r1{
+    width:196px;height:196px;
+    border-top-color:var(--blue);border-right-color:var(--blue);
+    animation:spin 1.6s linear infinite;
+    filter:drop-shadow(0 0 8px rgba(30,111,217,.5));
+  }
+  .r2{
+    width:156px;height:156px;
+    border-bottom-color:var(--gold);border-left-color:var(--gold);
+    animation:spin 2.2s linear infinite reverse;
+    filter:drop-shadow(0 0 6px rgba(245,168,0,.5));
+  }
+  .r3{
+    width:116px;height:116px;
+    border-top-color:var(--gold2);border-left-color:var(--gold2);
+    animation:spin 1.1s linear infinite;
+    filter:drop-shadow(0 0 4px rgba(255,201,64,.5));
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .brand{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:var(--navy);font-weight:800;font-size:21px;letter-spacing:.5px;
+    text-align:center;
+  }
+  .brand span{color:var(--blue)}
+  .tagline{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:#8a97a8;font-size:11.5px;letter-spacing:3px;
+    text-transform:uppercase;margin-top:-14px;
+  }
+
+  .retry{margin-top:6px;display:none;font-family:-apple-system,sans-serif}
+  .retry a{color:var(--blue);font-size:13px;text-decoration:underline;cursor:pointer}
+
+  /* ---------- install banner ---------- */
+  #installBanner{
+    position:fixed;left:12px;right:12px;bottom:-140px;z-index:30;
+    background:#fff;border-radius:16px;
+    box-shadow:0 8px 30px rgba(13,43,82,.28);
+    padding:14px 16px;display:flex;align-items:center;gap:12px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    transition:bottom .4s cubic-bezier(.2,.8,.2,1);
+    max-width:420px;margin:0 auto;
+  }
+  #installBanner.show{bottom:16px}
+  #installBanner img{width:44px;height:44px;border-radius:11px;flex-shrink:0;object-fit:cover}
+  #installBanner .ib-text{flex:1;min-width:0}
+  #installBanner .ib-title{font-weight:700;font-size:14px;color:var(--navy);margin-bottom:2px}
+  #installBanner .ib-sub{font-size:12px;color:#6b7686;line-height:1.35}
+  #installBanner .ib-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;flex-shrink:0}
+  #installBanner button{
+    border:0;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;
+    cursor:pointer;white-space:nowrap;font-family:inherit;
+  }
+  #installBanner .ib-install{background:var(--blue);color:#fff}
+  #installBanner .ib-install:active{background:#1859ab}
+  #installBanner .ib-dismiss{background:transparent;color:#9aa4b2;padding:4px 6px}
+
+  @media (prefers-color-scheme: dark){
+    #installBanner{background:#151b24}
+    #installBanner .ib-title{color:#fff}
+    #installBanner .ib-sub{color:#9aa4b2}
+  }
+</style>
+</head>
+<body>
+  <iframe
+    id="appFrame"
+    title="Tax Calculator"
+    allow="camera; clipboard-write; clipboard-read">
+  </iframe>
+
+  <div id="splash">
+    <div class="logo-wrap">
+      <div class="ring r1"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+      <img src="icon.png" alt="Tax Calculator logo">
+    </div>
+    <div class="brand"><span>Tax</span> Calculator</div>
+    <div class="tagline">Loading</div>
+    <div class="retry" id="retry">
+      <a id="retryLink">Taking too long? Tap to retry</a>
+    </div>
+  </div>
+
+  <div id="installBanner">
+    <img src="icon.png" alt="">
+    <div class="ib-text">
+      <div class="ib-title">Install Tax Calculator</div>
+      <div class="ib-sub" id="ibSub">Add to your home screen for quick, full-screen access.</div>
+    </div>
+    <div class="ib-actions">
+      <button class="ib-install" id="ibInstall">Install</button>
+      <button class="ib-dismiss" id="ibDismiss">Not now</button>
+    </div>
+  </div>
+
+<script>
+  // ---- Hardcoded Apps Script web app URL ----
+  var APP_URL = 'https://script.google.com/macros/s/AKfycbx2EgayzIDev9Uisfug65nCmc_XejpLoi2J3eUqtUo9npka8vhg0z1iXWFW_rs1eCfr/exec';
+
+  var frame  = document.getElementById('appFrame');
+  var splash = document.getElementById('splash');
+  var retry  = document.getElementById('retry');
+  var hidden = false;
+
+  function hideSplash(){ if(hidden) return; hidden = true; splash.classList.add('hide'); }
+
+  frame.addEventListener('load', function(){ setTimeout(hideSplash, 350); });
+
+  setTimeout(function(){ if(!hidden) retry.style.display = 'block'; }, 15000);
+  document.getElementById('retryLink').addEventListener('click', function(){
+    retry.style.display = 'none';
+    frame.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
+  });
+
+  frame.src = APP_URL;
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+
+  // ================================================================
+  // INSTALL BANNER
+  // ================================================================
+  (function(){
+    var DISMISS_KEY = 'tc_install_dismissed_at';
+    var DISMISS_DAYS = 14; // don't nag again for this many days after "Not now"
+
+    var banner   = document.getElementById('installBanner');
+    var subEl    = document.getElementById('ibSub');
+    var installB = document.getElementById('ibInstall');
+    var dismissB = document.getElementById('ibDismiss');
+    var deferredPrompt = null;
+
+    function isStandalone(){
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.navigator.standalone === true; // iOS Safari
+    }
+
+    function recentlyDismissed(){
+      try {
+        var t = localStorage.getItem(DISMISS_KEY);
+        if (!t) return false;
+        var days = (Date.now() - parseInt(t, 10)) / 86400000;
+        return days < DISMISS_DAYS;
+      } catch (e) { return false; }
+    }
+
+    function showBanner(){
+      if (isStandalone() || recentlyDismissed()) return;
+      setTimeout(function(){ banner.classList.add('show'); }, 900);
+    }
+
+    function hideBanner(){
+      banner.classList.remove('show');
+    }
+
+    dismissB.addEventListener('click', function(){
+      hideBanner();
+      try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch (e) {}
+    });
+
+    // --- Chrome / Android / Edge: native beforeinstallprompt ---
+    window.addEventListener('beforeinstallprompt', function(e){
+      e.preventDefault();
+      deferredPrompt = e;
+      subEl.textContent = 'Add to your home screen for quick, full-screen access.';
+      showBanner();
+    });
+
+    installB.addEventListener('click', function(){
+      if (deferredPrompt) {
+        hideBanner();
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; });
+      } else {
+        // iOS Safari (and any browser without beforeinstallprompt) — show instructions
+        subEl.textContent = 'Tap the Share icon, then "Add to Home Screen".';
+        installB.style.display = 'none';
+      }
+    });
+
+    window.addEventListener('appinstalled', function(){
+      hideBanner();
+      try { localStorage.removeItem(DISMISS_KEY); } catch (e) {}
+    });
+
+    // --- iOS Safari: no beforeinstallprompt event exists, so surface the
+    // banner ourselves with tap-to-see-instructions behavior ---
+    var ua = window.navigator.userAgent;
+    var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    var isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+    if (isIOS && isSafari && !isStandalone()) {
+      subEl.textContent = 'Tap the Share icon, then "Add to Home Screen".';
+      showBanner();
+    }
+  })();
+</script>
+</body>
+</html>

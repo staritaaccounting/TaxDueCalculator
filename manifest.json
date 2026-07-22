@@ -1,0 +1,26 @@
+{
+  "name": "Tax Calculator",
+  "short_name": "Tax Calc",
+  "description": "BIR tax compliance calculator and filing assistant.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0d2b52",
+  "categories": ["productivity", "finance", "business"],
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

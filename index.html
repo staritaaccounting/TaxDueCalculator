@@ -9,6 +9,7 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tax Calculator">
 <meta name="description" content="Tax Calculator — BIR tax compliance calculator and filing assistant.">
@@ -23,7 +24,6 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);overflow:hidden}
-  #appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
 
   /* ---------- splash ---------- */
   #splash{
@@ -114,12 +114,6 @@
 </style>
 </head>
 <body>
-  <iframe
-    id="appFrame"
-    title="Tax Calculator"
-    allow="camera; clipboard-write; clipboard-read">
-  </iframe>
-
   <div id="splash">
     <div class="logo-wrap">
       <div class="ring r1"></div>
@@ -150,22 +144,32 @@
   // ---- Hardcoded Apps Script web app URL ----
   var APP_URL = 'https://script.google.com/macros/s/AKfycbx2EgayzIDev9Uisfug65nCmc_XejpLoi2J3eUqtUo9npka8vhg0z1iXWFW_rs1eCfr/exec';
 
-  var frame  = document.getElementById('appFrame');
   var splash = document.getElementById('splash');
   var retry  = document.getElementById('retry');
-  var hidden = false;
 
-  function hideSplash(){ if(hidden) return; hidden = true; splash.classList.add('hide'); }
-
-  frame.addEventListener('load', function(){ setTimeout(hideSplash, 350); });
-
-  setTimeout(function(){ if(!hidden) retry.style.display = 'block'; }, 15000);
-  document.getElementById('retryLink').addEventListener('click', function(){
+  // Google's script.google.com endpoint sends X-Frame-Options: SAMEORIGIN,
+  // so it can never be embedded in an <iframe> from a GitHub Pages origin —
+  // that's a hard server-side restriction on Google's end, not something
+  // fixable from this page. Instead this shell does a full top-level
+  // navigation to the app: shows the splash for a beat, then hands the
+  // whole window over to the Apps Script page. XFO only blocks framing,
+  // not top-level navigation, so this always works.
+  function go(){
     retry.style.display = 'none';
-    frame.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
-  });
+    // location.replace (not .href) so the blank shell doesn't sit in
+    // browser history — the Back button should leave the app, not
+    // bounce back to an empty splash screen.
+    window.location.replace(APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now());
+  }
 
-  frame.src = APP_URL;
+  if (navigator.onLine === false) {
+    retry.style.display = 'block';
+    document.querySelector('.tagline').textContent = 'Offline';
+  } else {
+    setTimeout(go, 450); // brief pause so the splash actually renders a frame
+  }
+
+  document.getElementById('retryLink').addEventListener('click', go);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){

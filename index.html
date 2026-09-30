@@ -134,8 +134,7 @@
 <body>
   <div id="appWrap">
     <iframe id="app" title="Tax Calculator"
-            allow="clipboard-read; clipboard-write; fullscreen"
-            referrerpolicy="no-referrer-when-downgrade"></iframe>
+            allow="camera; clipboard-write; clipboard-read"></iframe>
   </div>
 
   <div id="splash">
@@ -169,65 +168,25 @@
   // ---- Hardcoded Apps Script web app URL ----
   var APP_URL = 'https://script.google.com/macros/s/AKfycbx2EgayzIDev9Uisfug65nCmc_XejpLoi2J3eUqtUo9npka8vhg0z1iXWFW_rs1eCfr/exec';
 
-  // The app is EMBEDDED so the address bar stays on the GitHub Pages URL
-  // and this page (with its install banner) stays alive.
-  // REQUIRES the Apps Script doGet() to call
-  //   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-  // and the deployment to be "Execute as: Me" / "Who has access: Anyone".
-  var LOAD_TIMEOUT_MS = 15000;
+  var frame  = document.getElementById('app');
+  var splash = document.getElementById('splash');
+  var retry  = document.getElementById('retry');
+  var hidden = false;
 
-  var frame    = document.getElementById('app');
-  var splash   = document.getElementById('splash');
-  var retry    = document.getElementById('retry');
-  var tagline  = document.querySelector('.tagline');
-  var loadTimer = null;
+  function hideSplash(){ if(hidden) return; hidden = true; splash.classList.add('hide'); }
 
-  function freshUrl(){
-    return APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
-  }
+  frame.addEventListener('load', function(){ setTimeout(hideSplash, 350); });
 
-  function showSplash(){
-    splash.classList.remove('hide');
+  setTimeout(function(){ if(!hidden) retry.style.display = 'block'; }, 15000);
+  document.getElementById('retryLink').addEventListener('click', function(){
     retry.style.display = 'none';
-    tagline.textContent = 'Loading';
-  }
-
-  function hideSplash(){
-    clearTimeout(loadTimer);
-    splash.classList.add('hide');
-  }
-
-  function load(){
-    if (navigator.onLine === false) {
-      showSplash();
-      tagline.textContent = 'Offline';
-      retry.style.display = 'block';
-      return;
-    }
-    showSplash();
-    clearTimeout(loadTimer);
-    loadTimer = setTimeout(function(){
-      tagline.textContent = 'Still loading';
-      retry.style.display = 'block';
-    }, LOAD_TIMEOUT_MS);
-    frame.src = freshUrl();
-  }
-
-  frame.addEventListener('load', function(){
-    // Ignore the initial about:blank load
-    if (!frame.getAttribute('src')) return;
-    hideSplash();
+    frame.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
   });
-
-  document.getElementById('retryLink').addEventListener('click', load);
   document.getElementById('openDirect').addEventListener('click', function(){
-    window.location.href = freshUrl();
-  });
-  window.addEventListener('online', function(){
-    if (!splash.classList.contains('hide')) load();
+    window.location.href = APP_URL;
   });
 
-  load();
+  frame.src = APP_URL;
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){

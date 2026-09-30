@@ -79,6 +79,13 @@
     text-transform:uppercase;margin-top:-14px;
   }
 
+  .openbtn{
+    display:none;margin-top:4px;border:0;border-radius:12px;padding:12px 26px;
+    background:var(--blue);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    box-shadow:0 4px 14px rgba(30,111,217,.35);
+  }
+  .openbtn:active{background:#1859ab}
   .retry{margin-top:6px;display:none;font-family:-apple-system,sans-serif}
   .retry a{color:var(--blue);font-size:13px;text-decoration:underline;cursor:pointer}
 
@@ -123,6 +130,7 @@
     </div>
     <div class="brand"><span>Tax</span> Calculator</div>
     <div class="tagline">Loading</div>
+    <button class="openbtn" id="openBtn">Open Tax Calculator</button>
     <div class="retry" id="retry">
       <a id="retryLink">Taking too long? Tap to retry</a>
     </div>
@@ -154,21 +162,37 @@
   // navigation to the app: shows the splash for a beat, then hands the
   // whole window over to the Apps Script page. XFO only blocks framing,
   // not top-level navigation, so this always works.
+  var tagline = document.querySelector('.tagline');
+  var openBtn = document.getElementById('openBtn');
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true; // iOS Safari
+  }
+
   function go(){
     retry.style.display = 'none';
-    // location.replace (not .href) so the blank shell doesn't sit in
-    // browser history — the Back button should leave the app, not
-    // bounce back to an empty splash screen.
+    // location.replace so the shell doesn't sit in history.
     window.location.replace(APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now());
   }
 
-  if (navigator.onLine === false) {
-    retry.style.display = 'block';
-    document.querySelector('.tagline').textContent = 'Offline';
+  if (isStandalone()) {
+    // Installed app: hand off to the Apps Script app right away.
+    if (navigator.onLine === false) {
+      retry.style.display = 'block';
+      tagline.textContent = 'Offline';
+    } else {
+      setTimeout(go, 450);
+    }
   } else {
-    setTimeout(go, 450); // brief pause so the splash actually renders a frame
+    // Normal browser tab: do NOT redirect, otherwise the install banner
+    // can never be seen or used. Stay here and let the user install or
+    // tap "Open" to continue in the browser.
+    tagline.textContent = 'Ready';
+    openBtn.style.display = 'block';
   }
 
+  openBtn.addEventListener('click', go);
   document.getElementById('retryLink').addEventListener('click', go);
 
   if ('serviceWorker' in navigator) {

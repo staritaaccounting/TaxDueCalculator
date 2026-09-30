@@ -25,6 +25,8 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);overflow:hidden}
 
+  #appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+
   /* ---------- splash ---------- */
   #splash{
     position:fixed;inset:0;z-index:20;
@@ -79,13 +81,6 @@
     text-transform:uppercase;margin-top:-14px;
   }
 
-  .openbtn{
-    display:none;margin-top:4px;border:0;border-radius:12px;padding:12px 26px;
-    background:var(--blue);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    box-shadow:0 4px 14px rgba(30,111,217,.35);
-  }
-  .openbtn:active{background:#1859ab}
   .retry{margin-top:6px;display:none;font-family:-apple-system,sans-serif}
   .retry a{color:var(--blue);font-size:13px;text-decoration:underline;cursor:pointer}
 
@@ -121,6 +116,12 @@
 </style>
 </head>
 <body>
+  <iframe
+    id="appFrame"
+    title="Tax Calculator"
+    allow="camera; clipboard-write; clipboard-read">
+  </iframe>
+
   <div id="splash">
     <div class="logo-wrap">
       <div class="ring r1"></div>
@@ -130,7 +131,6 @@
     </div>
     <div class="brand"><span>Tax</span> Calculator</div>
     <div class="tagline">Loading</div>
-    <button class="openbtn" id="openBtn">Open Tax Calculator</button>
     <div class="retry" id="retry">
       <a id="retryLink">Taking too long? Tap to retry</a>
     </div>
@@ -152,48 +152,24 @@
   // ---- Hardcoded Apps Script web app URL ----
   var APP_URL = 'https://script.google.com/macros/s/AKfycbx2EgayzIDev9Uisfug65nCmc_XejpLoi2J3eUqtUo9npka8vhg0z1iXWFW_rs1eCfr/exec';
 
+  var frame  = document.getElementById('appFrame');
   var splash = document.getElementById('splash');
   var retry  = document.getElementById('retry');
+  var hidden = false;
 
-  // Google's script.google.com endpoint sends X-Frame-Options: SAMEORIGIN,
-  // so it can never be embedded in an <iframe> from a GitHub Pages origin —
-  // that's a hard server-side restriction on Google's end, not something
-  // fixable from this page. Instead this shell does a full top-level
-  // navigation to the app: shows the splash for a beat, then hands the
-  // whole window over to the Apps Script page. XFO only blocks framing,
-  // not top-level navigation, so this always works.
-  var tagline = document.querySelector('.tagline');
-  var openBtn = document.getElementById('openBtn');
+  function hideSplash(){ if(hidden) return; hidden = true; splash.classList.add('hide'); }
 
-  function isStandalone(){
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true; // iOS Safari
-  }
+  frame.addEventListener('load', function(){ setTimeout(hideSplash, 350); });
 
-  function go(){
+  setTimeout(function(){ if(!hidden) retry.style.display = 'block'; }, 15000);
+  document.getElementById('retryLink').addEventListener('click', function(){
     retry.style.display = 'none';
-    // location.replace so the shell doesn't sit in history.
-    window.location.replace(APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now());
-  }
+    frame.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
+  });
 
-  if (isStandalone()) {
-    // Installed app: hand off to the Apps Script app right away.
-    if (navigator.onLine === false) {
-      retry.style.display = 'block';
-      tagline.textContent = 'Offline';
-    } else {
-      setTimeout(go, 450);
-    }
-  } else {
-    // Normal browser tab: do NOT redirect, otherwise the install banner
-    // can never be seen or used. Stay here and let the user install or
-    // tap "Open" to continue in the browser.
-    tagline.textContent = 'Ready';
-    openBtn.style.display = 'block';
-  }
-
-  openBtn.addEventListener('click', go);
-  document.getElementById('retryLink').addEventListener('click', go);
+  // Load the app inside the shell (no redirect) so the page, and the
+  // install banner below, stay in place.
+  frame.src = APP_URL;
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){

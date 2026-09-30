@@ -1,8 +1,8 @@
 // Tax Calculator - Service Worker
-// v2: bumped cache name to force-evict the old cached shell (which still had
+// v3: shell is an iframe again; bump cache to evict the redirect-only shell.
 // the <iframe> in it), and switched the HTML document to network-first so a
 // stale cached page can never get "stuck" like this again.
-const CACHE_NAME = 'tax-calculator-v2';
+const CACHE_NAME = 'tax-calculator-v3';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(event) {

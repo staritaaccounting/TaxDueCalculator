@@ -1,7 +1,7 @@
 // Tax Calculator - Service Worker
 // v3: shell now embeds the Apps Script app in an iframe (URL stays on
 // GitHub Pages). Cache name bumped so every device drops the old redirect shell.
-const CACHE_NAME = 'tax-calculator-v3';
+const CACHE_NAME = 'tax-calculator-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(event) {

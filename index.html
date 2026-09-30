@@ -25,7 +25,18 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);overflow:hidden}
 
-  #appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+  /* ---------- app frame (Apps Script embedded, URL stays on GitHub) ---------- */
+  #appWrap{
+    position:fixed;inset:0;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    padding-left:env(safe-area-inset-left,0px);
+    padding-right:env(safe-area-inset-right,0px);
+    background:var(--bg);
+  }
+  #app{
+    display:block;width:100%;height:100%;border:0;background:var(--bg);
+  }
 
   /* ---------- splash ---------- */
   #splash{
@@ -68,6 +79,7 @@
     filter:drop-shadow(0 0 4px rgba(255,201,64,.5));
   }
   @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){ .ring{animation-duration:6s} }
 
   .brand{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -81,12 +93,16 @@
     text-transform:uppercase;margin-top:-14px;
   }
 
-  .retry{margin-top:6px;display:none;font-family:-apple-system,sans-serif}
+  .retry{
+    margin-top:6px;display:none;font-family:-apple-system,sans-serif;
+    text-align:center;line-height:2;
+  }
   .retry a{color:var(--blue);font-size:13px;text-decoration:underline;cursor:pointer}
 
   /* ---------- install banner ---------- */
   #installBanner{
-    position:fixed;left:12px;right:12px;bottom:-140px;z-index:30;
+    position:fixed;left:12px;right:12px;
+    bottom:calc(-160px - env(safe-area-inset-bottom,0px));z-index:30;
     background:#fff;border-radius:16px;
     box-shadow:0 8px 30px rgba(13,43,82,.28);
     padding:14px 16px;display:flex;align-items:center;gap:12px;
@@ -94,7 +110,7 @@
     transition:bottom .4s cubic-bezier(.2,.8,.2,1);
     max-width:420px;margin:0 auto;
   }
-  #installBanner.show{bottom:16px}
+  #installBanner.show{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
   #installBanner img{width:44px;height:44px;border-radius:11px;flex-shrink:0;object-fit:cover}
   #installBanner .ib-text{flex:1;min-width:0}
   #installBanner .ib-title{font-weight:700;font-size:14px;color:var(--navy);margin-bottom:2px}
@@ -116,11 +132,11 @@
 </style>
 </head>
 <body>
-  <iframe
-    id="appFrame"
-    title="Tax Calculator"
-    allow="camera; clipboard-write; clipboard-read">
-  </iframe>
+  <div id="appWrap">
+    <iframe id="app" title="Tax Calculator"
+            allow="clipboard-read; clipboard-write; fullscreen"
+            referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
 
   <div id="splash">
     <div class="logo-wrap">
@@ -132,7 +148,8 @@
     <div class="brand"><span>Tax</span> Calculator</div>
     <div class="tagline">Loading</div>
     <div class="retry" id="retry">
-      <a id="retryLink">Taking too long? Tap to retry</a>
+      <a id="retryLink">Taking too long? Tap to retry</a><br>
+      <a id="openDirect">Open in full page instead</a>
     </div>
   </div>
 
@@ -152,24 +169,65 @@
   // ---- Hardcoded Apps Script web app URL ----
   var APP_URL = 'https://script.google.com/macros/s/AKfycbx2EgayzIDev9Uisfug65nCmc_XejpLoi2J3eUqtUo9npka8vhg0z1iXWFW_rs1eCfr/exec';
 
-  var frame  = document.getElementById('appFrame');
-  var splash = document.getElementById('splash');
-  var retry  = document.getElementById('retry');
-  var hidden = false;
+  // The app is EMBEDDED so the address bar stays on the GitHub Pages URL
+  // and this page (with its install banner) stays alive.
+  // REQUIRES the Apps Script doGet() to call
+  //   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+  // and the deployment to be "Execute as: Me" / "Who has access: Anyone".
+  var LOAD_TIMEOUT_MS = 15000;
 
-  function hideSplash(){ if(hidden) return; hidden = true; splash.classList.add('hide'); }
+  var frame    = document.getElementById('app');
+  var splash   = document.getElementById('splash');
+  var retry    = document.getElementById('retry');
+  var tagline  = document.querySelector('.tagline');
+  var loadTimer = null;
 
-  frame.addEventListener('load', function(){ setTimeout(hideSplash, 350); });
+  function freshUrl(){
+    return APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
+  }
 
-  setTimeout(function(){ if(!hidden) retry.style.display = 'block'; }, 15000);
-  document.getElementById('retryLink').addEventListener('click', function(){
+  function showSplash(){
+    splash.classList.remove('hide');
     retry.style.display = 'none';
-    frame.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now();
+    tagline.textContent = 'Loading';
+  }
+
+  function hideSplash(){
+    clearTimeout(loadTimer);
+    splash.classList.add('hide');
+  }
+
+  function load(){
+    if (navigator.onLine === false) {
+      showSplash();
+      tagline.textContent = 'Offline';
+      retry.style.display = 'block';
+      return;
+    }
+    showSplash();
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(function(){
+      tagline.textContent = 'Still loading';
+      retry.style.display = 'block';
+    }, LOAD_TIMEOUT_MS);
+    frame.src = freshUrl();
+  }
+
+  frame.addEventListener('load', function(){
+    // Ignore the initial about:blank load
+    if (!frame.getAttribute('src')) return;
+    hideSplash();
   });
 
-  // Load the app inside the shell (no redirect) so the page, and the
-  // install banner below, stay in place.
-  frame.src = APP_URL;
+  document.getElementById('retryLink').addEventListener('click', load);
+  document.getElementById('openDirect').addEventListener('click', function(){
+    window.location.href = freshUrl();
+  });
+  window.addEventListener('online', function(){
+    if (!splash.classList.contains('hide')) load();
+  });
+
+  load();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
@@ -206,7 +264,7 @@
 
     function showBanner(){
       if (isStandalone() || recentlyDismissed()) return;
-      setTimeout(function(){ banner.classList.add('show'); }, 900);
+      setTimeout(function(){ banner.classList.add('show'); }, 1200);
     }
 
     function hideBanner(){
@@ -222,6 +280,7 @@
     window.addEventListener('beforeinstallprompt', function(e){
       e.preventDefault();
       deferredPrompt = e;
+      installB.style.display = '';
       subEl.textContent = 'Add to your home screen for quick, full-screen access.';
       showBanner();
     });
@@ -243,8 +302,7 @@
       try { localStorage.removeItem(DISMISS_KEY); } catch (e) {}
     });
 
-    // --- iOS Safari: no beforeinstallprompt event exists, so surface the
-    // banner ourselves with tap-to-see-instructions behavior ---
+    // --- iOS Safari: no beforeinstallprompt event exists ---
     var ua = window.navigator.userAgent;
     var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
     var isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);

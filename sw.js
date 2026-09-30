@@ -1,8 +1,7 @@
 // Tax Calculator - Service Worker
-// v3: shell is an iframe again; bump cache to evict the redirect-only shell.
-// the <iframe> in it), and switched the HTML document to network-first so a
-// stale cached page can never get "stuck" like this again.
-const CACHE_NAME = 'tax-calculator-v5';
+// v3: shell now embeds the Apps Script app in an iframe (URL stays on
+// GitHub Pages). Cache name bumped so every device drops the old redirect shell.
+const CACHE_NAME = 'tax-calculator-v3';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', function(event) {
@@ -45,7 +44,7 @@ self.addEventListener('fetch', function(event) {
         caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
         return networkResponse;
       }).catch(function() {
-        return caches.match(event.request);
+        return caches.match(event.request, { ignoreSearch: true }).then(function(r){ return r || caches.match('./index.html'); });
       })
     );
     return;

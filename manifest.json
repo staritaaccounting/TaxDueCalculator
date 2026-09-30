@@ -8,19 +8,23 @@
   "orientation": "portrait",
   "background_color": "#f4f7fb",
   "theme_color": "#0d2b52",
-  "categories": ["productivity", "finance", "business"],
+  "categories": [
+    "productivity",
+    "finance",
+    "business"
+  ],
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "512x512",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }

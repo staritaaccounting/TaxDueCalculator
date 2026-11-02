@@ -1,65 +1,44 @@
-// Tax Calculator - Service Worker
-// v3: shell now embeds the Apps Script app in an iframe (URL stays on
-// GitHub Pages). Cache name bumped so every device drops the old redirect shell.
-const CACHE_NAME = 'tax-calculator-v4';
-const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
+/* ITR Generator service worker: caches the app shell for fast, installable loads. */
+const VERSION = 'itr-v1.3.0';
+const SHELL = [
+  './', './index.html', './css/styles.css',
+  './js/config.js', './js/tax.js', './js/excel.js', './js/app.js',
+  './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/logo.png', './icons/logo-mark.png'
+];
 
-self.addEventListener('install', function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(ASSETS);
-    })
-  );
-  self.skipWaiting();
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys
-          .filter(function(key) { return key !== CACHE_NAME; })
-          .map(function(key) { return caches.delete(key); })
-      );
-    })
-  );
-  self.clients.claim();
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-self.addEventListener('fetch', function(event) {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return; // never cache API calls (POST)
+  const url = new URL(req.url);
+  if (url.hostname.includes('script.google') || url.hostname.includes('googleusercontent')) return;
 
-  const isDocument = event.request.mode === 'navigate' ||
-                      event.request.destination === 'document';
-
-  if (isDocument) {
-    // Network-first for the shell page itself — always try to get the
-    // latest index.html so a deploy is never masked by an old cached copy.
-    // Only fall back to cache if the network is actually unreachable.
-    event.respondWith(
-      fetch(event.request).then(function(networkResponse) {
-        const clone = networkResponse.clone();
-        caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
-        return networkResponse;
-      }).catch(function() {
-        return caches.match(event.request, { ignoreSearch: true }).then(function(r){ return r || caches.match('./index.html'); });
-      })
+  // Same-origin app files: network first (always fresh after a GitHub update), cache fallback offline
+  if (url.origin === location.origin) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(VERSION).then((c) => c.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
     );
     return;
   }
-
-  // Cache-first for static assets (icon, manifest) — these rarely change.
-  event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request).then(function(networkResponse) {
-        if (networkResponse && networkResponse.ok) {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
-        }
-        return networkResponse;
-      }).catch(function() { return response; });
-    })
-  );
+  // CDN libraries and fonts: cache first
+  if (/cdn\.sheetjs\.com|cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.hostname)) {
+    e.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(VERSION).then((c) => c.put(req, copy));
+        return res;
+      }))
+    );
+  }
 });
